@@ -1,0 +1,9 @@
+{
+  "id": "RoyalSort",
+  "name": "Royal Sort",
+  "author": ["denneyl"],
+  "description": "TODO add the description :)",
+  "prefix": "royalsort",
+  "main_file": "main.lua",
+  "version": "0.0.1"
+}
