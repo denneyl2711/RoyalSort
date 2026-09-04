@@ -11,8 +11,6 @@
 -- red steel king
 -- garbage (sort by num ig)
 
-_G.ROYAL_SORT_ENABLED = false
-
 local DEFAULT_SORT_PRIORITIES = {
     seal = {
         Blue = 1, Purple = 2, Gold = 3, Red = 4,
@@ -193,9 +191,6 @@ G.FUNCS.ROYAL_SORT = royal_sort
 -- Initialize button functionality
 G.FUNCS = G.FUNCS or {}
 G.FUNCS.royal_sort_hand = function(e)
-    -- Force enable royal sort
-    _G.ROYAL_SORT_ENABLED = true
-
     -- Apply royal sort configuration
     if G.hand and G.hand.config then
         G.hand.config.sort = 'royal'
