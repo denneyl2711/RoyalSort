@@ -1,0 +1,46 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+# Disable royal sort when "Suit" sort is clicked
+[[patches]]
+[patches.pattern]
+target = 'functions/button_callbacks.lua'
+pattern = '''
+G.hand:sort('suit desc')
+'''
+position = 'before'
+payload = '''
+_G.ROYAL_SORT_ENABLED = false
+'''
+match_indent = true
+
+# Disable royal sort when "Rank" sort is clicked
+[[patches]]
+[patches.pattern]
+target = 'functions/button_callbacks.lua'
+pattern = '''
+G.hand:sort('desc')
+'''
+position = 'before'
+payload = '''
+_G.ROYAL_SORT_ENABLED = false
+'''
+match_indent = true
+
+# Inject Royal Sort into the built-in sorting method
+[[patches]]
+[patches.pattern]
+target = 'cardarea.lua'
+pattern = '''
+function CardArea:sort(method)
+'''
+position = 'after'
+payload = '''
+if _G.ROYAL_SORT_ENABLED then
+G.FUNCS.ROYAL_SORT()
+end
+'''
+match_indent = true
+
+

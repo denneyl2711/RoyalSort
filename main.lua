@@ -1,3 +1,5 @@
+-- adapted from MagicSort code --> https://github.com/acidflow-balatro/MagicSort/blob/main/MagicSort/MagicSort.lua
+
 -- sorting method
 -- queen
 -- red queen
@@ -45,7 +47,6 @@ local DEFAULT_SORT_PRIORITIES = {
     },
 }
 
--- modified from MagicSort code --> https://github.com/acidflow-balatro/MagicSort/blob/main/MagicSort/MagicSort.lua
 local function get_sort_key(card, is_garbage)
     local default_val = 000
     local keys = { default_val, default_val, default_val, default_val }
@@ -108,7 +109,6 @@ local function get_garbage_sort(card)
     return get_sort_key(card, true)
 end
 
--- adapted from MagicSort code --> https://github.com/acidflow-balatro/MagicSort/blob/main/MagicSort/MagicSort.lua
 local function royal_sort()
     if not G then
         return
@@ -188,8 +188,9 @@ local function royal_sort()
     end
 end
 
+G.FUNCS.ROYAL_SORT = royal_sort
+
 -- Initialize button functionality
--- yep, also based off of magic sort...
 G.FUNCS = G.FUNCS or {}
 G.FUNCS.royal_sort_hand = function(e)
     -- Force enable royal sort
@@ -309,77 +310,6 @@ function create_UIBox_buttons()
     end
     return ret
 end
-
------------------------------------------------------------------------
--- Automatic sorting integration hooks
--- more stuff I stole from magic sort
--- disabled for now because it's annoying to have this go off even if I haven't selected royal sort as the thing I want
--- todo(denneyl): have this only do the sorting when we have selected royal sort as the sorting style we want
---local original_Card_add_to_deck = Card.add_to_deck
---Card.add_to_deck = function(self, from_debuff)
---    local result = original_Card_add_to_deck(self, from_debuff)
---
---    if _G.ROYAL_SORT_ENABLED and G.hand and self.area == G.hand then
---        G.E_MANAGER:add_event(Event({
---            trigger = 'after',
---            delay = 0.1,
---            func = function()
---                if _G.ROYAL_SORT_ENABLED then
---                    royal_sort()
---                end
---                return true
---            end
---        }))
---    end
---
---    return result
---end
---
---local original_Card_remove_from_deck = Card.remove_from_deck
---Card.remove_from_deck = function(self, from_debuff)
---    local was_in_hand = (self.area == G.hand)
---    local result = original_Card_remove_from_deck(self, from_debuff)
---
---    if _G.ROYAL_SORT_ENABLED and was_in_hand and G.hand then
---        G.E_MANAGER:add_event(Event({
---            trigger = 'after',
---            delay = 0.1,
---            func = function()
---                if _G.ROYAL_SORT_ENABLED then
---                    royal_sort()
---                end
---                return true
---            end
---        }))
---    end
---
---    return result
---end
---
----- Enhanced draw integration
---if G.FUNCS and G.FUNCS.draw_from_deck_to_hand then
---    local original_draw = G.FUNCS.draw_from_deck_to_hand
---    G.FUNCS.draw_from_deck_to_hand = function(e)
---        local result = original_draw(e)
---
---        if _G.ROYAL_SORT_ENABLED then
---            G.E_MANAGER:add_event(Event({
---                trigger = 'after',
---                delay = 0.15,
---                func = function()
---                    if _G.ROYAL_SORT_ENABLED then
---                        royal_sort()
---                    end
---                    return true
---                end
---            }))
---        end
---
---        return result
---    end
---end
------------------------------------------------------------------------
-
 
 -- this is from Gemini, not my fault if it breaks everything
 -- now that I look at it though, this is actually pretty simple :)
