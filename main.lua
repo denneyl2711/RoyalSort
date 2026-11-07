@@ -1,17 +1,7 @@
 -- adapted from MagicSort code --> https://github.com/acidflow-balatro/MagicSort/blob/main/MagicSort/MagicSort.lua
 
--- sorting method
--- queen
--- red queen
--- steel queen
--- red steel queen
--- king
--- red king
--- steel king
--- red steel king
--- garbage (sort by num ig)
-
-local DEFAULT_SORT_PRIORITIES = {
+-- TODO(denneyl): move the sorting comments up here?
+local DESCENDING_SORT_PRIORITIES = {
     seal = {
         Blue = 1, Purple = 2, Gold = 3, Red = 4,
     },
@@ -45,7 +35,42 @@ local DEFAULT_SORT_PRIORITIES = {
     },
 }
 
-local function get_sort_key(card, is_garbage)
+local ASCENDING_SORT_PRIORITIES = {
+    seal = {
+        Blue = 1, Purple = 2, Gold = 3, Red = 4,
+    },
+    suit = {
+        Spades = 1, Hearts = 2, Clubs = 3, Diamonds = 4
+    },
+    rank = {
+        [2] = 1,
+        [3] = 2,
+        [4] = 3,
+        [5] = 4,
+        [6] = 5,
+        [7] = 6,
+        [8] = 7,
+        [9] = 8,
+        [10] = 9,
+        Jack = 10,
+        Queen = 11,
+        King = 12,
+        Ace = 13,
+    },
+    enhancement = {
+        m_gold = 2,
+        m_glass = 3,
+        m_wild = 4,
+        m_bonus = 5,
+        m_mult = 6,
+        m_lucky = 7,
+        m_steel = 8,
+        m_stone = 9,
+    },
+}
+
+local function get_sort_key(card, is_garbage, is_ascending)
+    local SORT_PRIORITIES = is_ascending and ASCENDING_SORT_PRIORITIES or DESCENDING_SORT_PRIORITIES
     local default_val = 000
     local keys = { default_val, default_val, default_val, default_val }
 
@@ -56,12 +81,12 @@ local function get_sort_key(card, is_garbage)
 
     -- enhancements
     if card.config and card.config.center and card.config.center.key then
-        keys[1] = DEFAULT_SORT_PRIORITIES.enhancement[card.config.center.key] or default_val
+        keys[1] = SORT_PRIORITIES.enhancement[card.config.center.key] or default_val
     end
 
     -- Seal priority mapping
     if card.seal then
-        keys[2] = DEFAULT_SORT_PRIORITIES.seal[card.seal] or default_val
+        keys[2] = SORT_PRIORITIES.seal[card.seal] or default_val
     end
 
     -- Rank detection and classification
@@ -70,24 +95,24 @@ local function get_sort_key(card, is_garbage)
 
         if type(rank) == "number" then
             if rank >= 2 and rank <= 10 then
-                keys[3] = DEFAULT_SORT_PRIORITIES.rank[rank] or default_val
+                keys[3] = SORT_PRIORITIES.rank[rank] or default_val
             elseif rank == 11 then
-                keys[3] = DEFAULT_SORT_PRIORITIES.rank.Jack or default_val
+                keys[3] = SORT_PRIORITIES.rank.Jack or default_val
             elseif rank == 12 then
-                keys[3] = DEFAULT_SORT_PRIORITIES.rank.Queen or default_val
+                keys[3] = SORT_PRIORITIES.rank.Queen or default_val
             elseif rank == 13 then
-                keys[3] = DEFAULT_SORT_PRIORITIES.rank.King or default_val
+                keys[3] = SORT_PRIORITIES.rank.King or default_val
             elseif rank == 14 then
-                keys[3] = DEFAULT_SORT_PRIORITIES.rank.Ace or default_val
+                keys[3] = SORT_PRIORITIES.rank.Ace or default_val
             end
         elseif type(rank) == "string" then
-            keys[3] = DEFAULT_SORT_PRIORITIES.rank[rank] or default_val
+            keys[3] = SORT_PRIORITIES.rank[rank] or default_val
         end
     end
 
     -- Suit hierarchy processing
     if card.base and card.base.suit then
-        keys[4] = DEFAULT_SORT_PRIORITIES.suit[card.base.suit] or default_val
+        keys[4] = SORT_PRIORITIES.suit[card.base.suit] or default_val
     end
 
     if is_garbage then
@@ -99,14 +124,146 @@ local function get_sort_key(card, is_garbage)
     end
 end
 
-local function get_royal_sort(card)
-    return get_sort_key(card, false)
+local function get_royal_sort(card, is_ascending)
+    return get_sort_key(card, false, is_ascending)
 end
 
-local function get_garbage_sort(card)
-    return get_sort_key(card, true)
+local function get_garbage_sort(card, is_ascending)
+    return get_sort_key(card, true, is_ascending)
 end
 
+--here's all the different combos for baron, shoot the moon, and raised fist
+
+-- (none) --------------> sort by rank? maybe just get rid of the button
+-- baron ---------------> same as (none)
+-- stm *****************> sort by desc. rank, steel cards to the right
+-- fist ****************> sort by asc. rank, steel cards to the right
+-- baron + stm ---------> queens, kings, garbage
+-- baron + fist ********> same as (fist)
+-- stm + fist **********> same as (fist)
+-- baron + stm + fist **> same as (fist)
+--TODO(denneyl): if there's no steel in hand for the starred items, don't do weird sorting
+local function create_piles(is_baron, is_shoot_the_moon, is_raised_fist)
+    local piles = {}
+    local is_ascending = false
+    if is_raised_fist then
+        is_ascending = true
+
+        local not_steel = {}
+        local steel = {}
+        local stone = {}
+
+        for _, card in ipairs(G.hand.cards) do
+            if card and card.base and card.base.id then
+                local sort_key
+                local pile
+                if card.config and card.config.center and card.config.center.key == "m_stone" then
+                    sort_key = get_garbage_sort(card, is_ascending)
+                    pile = stone
+                else
+                    sort_key = get_garbage_sort(card, is_ascending)
+                    if card.config and card.config.center and card.config.center.key == "m_steel" then
+                        pile = steel
+                    else
+                        pile = not_steel
+                    end
+                end
+
+                table.insert(pile, {
+                    card = card,
+                    key = sort_key
+                })
+            end
+        end
+
+        piles[#piles + 1] = not_steel
+        piles[#piles + 1] = steel
+        piles[#piles + 1] = stone
+    elseif is_baron and is_shoot_the_moon then
+        local queens = {}
+        local kings = {}
+        local garbage = {}
+
+        for _, card in ipairs(G.hand.cards) do
+            if card and card.base and card.base.id then
+                local sort_key
+                local pile
+                if card.base.id == 13 then
+                    sort_key = get_royal_sort(card, is_ascending)
+                    pile = kings
+                elseif card.base.id == 12 then
+                    sort_key = get_royal_sort(card, is_ascending)
+                    pile = queens
+                else
+                    sort_key = get_garbage_sort(card, is_ascending)
+                    pile = garbage
+                end
+
+                table.insert(pile, {
+                    card = card,
+                    key = sort_key
+                })
+            end
+        end
+
+        piles[#piles + 1] = queens
+        piles[#piles + 1] = kings
+        piles[#piles + 1] = garbage
+    elseif is_shoot_the_moon then
+        local not_steel_queens = {}
+        local steel_queens = {}
+        local garbage = {}
+        local stone = {}
+
+        for _, card in ipairs(G.hand.cards) do
+            if card and card.base and card.base.id then
+                local sort_key
+                local pile
+                if card.config and card.config.center and card.config.center.key == "m_stone" then
+                    sort_key = get_garbage_sort(card, is_ascending)
+                    pile = stone
+                elseif card.base.id == 12 then
+                    sort_key = get_royal_sort(card, is_ascending)
+                    if card.config and card.config.center and card.config.center.key == "m_steel" then
+                        pile = steel_queens
+                    else
+                        pile = not_steel_queens
+                    end
+                else
+                    sort_key = get_garbage_sort(card, is_ascending)
+                    pile = garbage
+                end
+
+                table.insert(pile, {
+                    card = card,
+                    key = sort_key
+                })
+            end
+        end
+
+        piles[#piles + 1] = not_steel_queens
+        piles[#piles + 1] = steel_queens
+        piles[#piles + 1] = garbage
+        piles[#piles + 1] = stone
+    else
+        local the_pile = {}
+        for _, card in ipairs(G.hand.cards) do
+            local sort_key = get_garbage_sort(card, is_ascending)
+            local pile = the_pile
+
+            table.insert(pile, {
+                card = card,
+                key = sort_key
+            })
+        end
+
+        piles[#piles + 1] = the_pile
+    end
+
+    return piles
+end
+
+-- TODO(denneyl): create an option to not apply royal sort in arcana/spectral packs
 local function royal_sort()
     if not G then
         return
@@ -121,59 +278,26 @@ local function royal_sort()
         return
     end
 
-    -- make three piles (queens, kings, garbage)
-    -- sort the three piles using our priorities (slightly different for royals vs garbage)
-    -- union the piles back together
+    local is_baron = next(SMODS.find_card('j_baron')) ~= nil
+    local is_shoot_the_moon = next(SMODS.find_card('j_shoot_the_moon')) ~= nil
+    local is_raised_fist = next(SMODS.find_card('j_raised_fist')) ~= nil
 
-    local queens = {}
-    local kings = {}
-    local garbage = {}
-
-    -- separate into the three piles
-    for _, card in ipairs(G.hand.cards) do
-        if card and card.base and card.base.id then
-            local sort_key
-            local pile
-            if card.base.id == 13 then
-                sort_key = get_royal_sort(card)
-                pile = kings
-            elseif card.base.id == 12 then
-                sort_key = get_royal_sort(card)
-                pile = queens
-            else
-                sort_key = get_garbage_sort(card)
-                pile = garbage
-            end
-
-            table.insert(pile, {
-                card = card,
-                key = sort_key
-            })
-        end
-    end
+    piles = create_piles(is_baron, is_shoot_the_moon, is_raised_fist)
 
     -- sort the cards
-    stable_sort(queens,  function(a, b) return a.key < b.key end)
-    stable_sort(kings,   function(a, b) return a.key < b.key end)
-    stable_sort(garbage, function(a, b) return a.key < b.key end)
+    for _, pile in ipairs(piles) do
+        stable_sort(pile, function(a, b)
+            return a.key < b.key
+        end)
+    end
 
     -- build our new hand from sorted cards
     local new_cards = {}
-    for _, item in ipairs(queens) do
-        if item and item.card then
-            table.insert(new_cards, item.card)
-        end
-    end
-
-    for _, item in ipairs(kings) do
-        if item and item.card then
-            table.insert(new_cards, item.card)
-        end
-    end
-
-    for _, item in ipairs(garbage) do
-        if item and item.card then
-            table.insert(new_cards, item.card)
+    for _, pile in ipairs(piles) do
+        for _, item in ipairs(pile) do
+            if item and item.card then
+                table.insert(new_cards, item.card)
+            end
         end
     end
 
