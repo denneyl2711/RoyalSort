@@ -9,6 +9,10 @@ Royal Sort sorts your cards into three piles:
 
 Select this sorting method when using a Shoot the Moon or Baron build. It's especially nice when transitioning between the two!
 
+# Installation
+- [Install Steammodded](https://github.com/Steamodded/smods/wiki)
+- Unzip the [latest release](https://github.com/denneyl2711/RoyalSort/releases/latest) into your Mods folder.
+
 ## Full Sorting Algorithm
 1. Sort cards into three piles: queens, kings, and garbage
 2. Sort the piles by the following rules:
